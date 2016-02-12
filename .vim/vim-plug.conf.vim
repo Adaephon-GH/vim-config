@@ -32,6 +32,6 @@ Plug 'vim-scripts/bash-support.vim'
 " gnupg
 Plug 'jamessan/vim-gnupg'
 " perl
-Plug 'vim-scripts/perl-support.vim'
+Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
 
 call plug#end()
