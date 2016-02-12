@@ -185,7 +185,7 @@ inoremap <C-Space> <C-X><C-O>
 "nmap [q :cprevious<CR>
 
 " Format of text and source code
-set cindent
+set smartindent
 set smarttab
 set shiftwidth=4
 set expandtab
