@@ -33,5 +33,8 @@ Plug 'vim-scripts/bash-support.vim'
 Plug 'jamessan/vim-gnupg'
 " perl
 Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
+" python (http://unlogic.co.uk/2013/02/08/vim-as-a-python-ide/)
+Plug 'klen/python-mode'
+"Plug 'davidhalter/jedi-vim'
 
 call plug#end()
