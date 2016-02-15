@@ -1,2 +1,3 @@
+/.vim/autoload/plug.vim.old
 /.vim/plugged
 *.sw[po]
