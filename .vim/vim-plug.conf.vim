@@ -8,6 +8,8 @@ Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-eunuch'
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-flagship'
 
 " development
 Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
