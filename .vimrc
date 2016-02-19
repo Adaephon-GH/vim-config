@@ -249,5 +249,7 @@ if filereadable($HOME."/.vim/vimrc.local")
 endif
 
 if filereadable($HOME."/.vim/vim-plug.conf.vim")
+  call plug#begin('~/.vim/plugged')
   source ~/.vim/vim-plug.conf.vim
+  call plug#end()
 endif

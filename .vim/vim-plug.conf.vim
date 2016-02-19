@@ -1,5 +1,3 @@
-call plug#begin('~/.vim/plugged')
-
 "" general plugins
 " extended features
 Plug 'c9s/colorselector.vim'
@@ -37,4 +35,3 @@ Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
 Plug 'klen/python-mode', { 'for': 'python' }
 "Plug 'davidhalter/jedi-vim'
 
-call plug#end()
