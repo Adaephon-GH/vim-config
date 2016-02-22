@@ -36,4 +36,6 @@ Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
 " python (http://unlogic.co.uk/2013/02/08/vim-as-a-python-ide/)
 Plug 'klen/python-mode', { 'for': 'python' }
 "Plug 'davidhalter/jedi-vim'
-
+" Salt Stack
+Plug 'saltstack/salt-vim', { 'for': 'sls' }
+Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
