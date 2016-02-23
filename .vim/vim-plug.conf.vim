@@ -11,6 +11,17 @@ Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-flagship'
 
+" color schemes
+Plug 'morhetz/gruvbox'
+Plug 'sjl/badwolf'
+Plug 'tomasr/molokai'
+Plug 'Lokaltog/vim-distinguished', { 'branch': 'develop' }
+Plug 'vim-scripts/xoria256.vim'
+Plug 'gotchacode/vim-tomorrow-theme'
+Plug 'w0ng/vim-hybrid'
+Plug 'alem0lars/vim-colorscheme-darcula'
+
+
 " development
 Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
 Plug 'scrooloose/nerdcommenter'
