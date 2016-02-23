@@ -244,6 +244,9 @@ augroup itsalltext
     autocmd BufNewFile,BufRead ~/.mozilla/firefox/*/itsalltext/*.txt set tw=0
 augroup END
 
+" Treat files in ~/.Xresources.d as xdefaults
+autocmd BufRead,BufNewFile ~/.Xresources.d/* set filetype=xdefaults
+
 if filereadable($HOME."/.vim/vimrc.local")
   source ~/.vim/vimrc.local
 endif
