@@ -1,6 +1,6 @@
 "" general plugins
 " extended features
-Plug 'c9s/colorselector.vim'
+Plug 'xolox/vim-misc' | Plug 'xolox/vim-colorscheme-switcher'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-speeddating'
