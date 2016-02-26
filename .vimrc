@@ -81,7 +81,6 @@ if &term ==? "xterm"
   set t_Sb=^[4%dm
   set t_Sf=^[3%dm
   set ttymouse=xterm2
-  set mouse=a
 endif
 
 if &term ==? "gnome" && has("eval")
@@ -142,6 +141,8 @@ set list
 set showbreak=«···
 set showcmd
 set cursorline
+
+set mouse=a
 
 set wrap
 set scrolloff=5
