@@ -31,6 +31,8 @@ Plug 'vim-scripts/tasklist.vim'
 
 Plug 'nathanaelkane/vim-indent-guides'
 Plug 'luochen1990/rainbow'
+Plug 'lilydjwg/colorizer'
+let g:colorizer_startup = 0
 
 
 " diff
