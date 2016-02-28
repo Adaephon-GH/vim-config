@@ -52,3 +52,5 @@ Plug 'klen/python-mode', { 'for': 'python' }
 " Salt Stack
 Plug 'saltstack/salt-vim', { 'for': 'sls' }
 Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
+" i3
+Plug 'PotatoesMaster/i3-vim-syntax'
