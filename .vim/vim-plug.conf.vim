@@ -27,7 +27,8 @@ Plug 'alem0lars/vim-colorscheme-darcula'
 
 " development
 Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
-Plug 'scrooloose/nerdcommenter'
+" replace it with commentary?
+"Plug 'scrooloose/nerdcommenter'
 Plug 'wesleyche/SrcExpl'
 Plug 'vim-scripts/taglist.vim'
 Plug 'vim-scripts/tasklist.vim'
