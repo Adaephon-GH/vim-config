@@ -139,13 +139,7 @@ autocmd InsertLeave * if pumvisible() == 0|pclose|endif
 "  endif
 "endfunction
 
-" Commands
-command Pc !perl -c %
-
 " Keymaps
-imap <F2> <Esc>:w<CR>a
-nmap <F2> :w<CR>
-nmap <C-F2> :wa<CR>
 nmap <F4> :noh<CR>
 nmap <F3> @:
 "inoremap <Tab> <C-R>=Mosh_Tab_Or_Complete()<CR>
