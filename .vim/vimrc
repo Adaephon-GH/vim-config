@@ -108,7 +108,12 @@ set modelines=5
 
 colorscheme Dark6
 set number
-set listchars=tab:»·,precedes:«,extends:»,eol:· ",trail:·
+set listchars=tab:»·,precedes:«,extends:»,eol:¬,nbsp:␣
+augroup trailing
+  au!
+  au InsertEnter * :set listchars-=trail:␣
+  au InsertLeave * :set listchars+=trail:␣
+augroup END
 set list
 set showbreak=«···
 set showcmd
