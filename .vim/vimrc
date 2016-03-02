@@ -1,18 +1,6 @@
 scriptencoding utf-8
 " ^^ Please leave the above line at the start of the file.
 " vim: set fenc=utf-8 tw=80 sw=2 sts=2 et foldmethod=marker :
-" Default configuration file for Vim
-" $Header: /var/cvsroot/gentoo-x86/app-editors/vim-core/files/vimrc-r3,v 1.1 2006/03/25 20:26:27 genstef Exp $
-
-" Written by Aron Griffis <agriffis@gentoo.org>
-" Modified by Ryan Phillips <rphillips@gentoo.org>
-" Modified some more by Ciaran McCreesh <ciaranm@gentoo.org>
-" Added Redhat's vimrc info by Seemant Kulleen <seemant@gentoo.org>
-
-" Startup Profiler
-"let g:startup_profile_csv = "/tmp/vim_startup.csv" 
-"runtime macros/startup_profile.vim
-
 
 " {{{ General settings
 " The following are some sensible defaults for Vim for most users.
@@ -93,18 +81,6 @@ if &term ==? "gnome" && has("eval")
 endif
 " }}}
 
-" {{{ Filetype plugin settings
-" Enable plugin-provided filetype settings, but only if the ftplugin
-" directory exists (which it won't on livecds, for example).
-if isdirectory(expand("$VIMRUNTIME/ftplugin"))
-  filetype plugin on
-
-  " Uncomment the next line (or copy to your ~/.vimrc) for plugin-provided
-  " indent settings. Some people don't like these, so we won't turn them on by
-  " default.
-  filetype indent on
-endif
-" }}}
 
 " {{{ Fix &shell, see bug #101665.
 if "" == &shell
@@ -125,16 +101,11 @@ if has("eval")
 endif
 " }}}
 
+filetype plugin indent on
 
 set modeline
 set modelines=5
 
-"" Format of display 
-"if has("gui_running")
-"  colorscheme Dark4t
-"else
-"  colorscheme elflord
-"endif
 colorscheme Dark6
 set number
 set listchars=tab:»·,precedes:«,extends:»,eol:· ",trail:·
@@ -168,7 +139,6 @@ function! Mosh_Tab_Or_Complete()
   endif
 endfunction
 
-
 " Commands
 command Pc !perl -c %
 
@@ -180,12 +150,6 @@ nmap <F4> :noh<CR>
 nmap <F3> @:
 inoremap <Tab> <C-R>=Mosh_Tab_Or_Complete()<CR>
 inoremap <C-Space> <C-X><C-O>
-
-"" Now handled by tpope/vim-unimpaired
-"nmap ]l :lnext<CR>
-"nmap [l :lprevious<CR>
-"nmap ]q :cnext<CR>
-"nmap [q :cprevious<CR>
 
 " Format of text and source code
 set smartindent
@@ -200,43 +164,6 @@ au FileType python,perl,bash setlocal cino=#1 commentstring=\ ##%s
 
 set nrformats-=octal
 set formatoptions+=j
-
-" Transparent editing of gpg encrypted files.
-" By Wouter Hanegraaff <wouter@blub.net>
-"augroup encrypted
-"    au!
-
-"    " First make sure nothing is written to ~/.viminfo while editing
-"    " an encrypted file.
-"    autocmd BufReadPre,FileReadPre      *.gpg set viminfo=
-"    " We don't want a swap file, as it writes unencrypted data to disk
-"    autocmd BufReadPre,FileReadPre      *.gpg set noswapfile
-"    " Switch to binary mode to read the encrypted file
-"    autocmd BufReadPre,FileReadPre      *.gpg set bin
-"    autocmd BufReadPre,FileReadPre      *.gpg let ch_save = &ch|set ch=2
-"    autocmd BufReadPre,FileReadPre      *.gpg let shsave=&sh
-"    autocmd BufReadPre,FileReadPre      *.gpg let &sh='sh'
-"    autocmd BufReadPre,FileReadPre      *.gpg let ch_save = &ch|set ch=2
-"    autocmd BufReadPost,FileReadPost    *.gpg '[,']!gpg --decrypt --default-recipient-self 2> /dev/null
-"    autocmd BufReadPost,FileReadPost    *.gpg let &sh=shsave
-
-"    " Switch to normal mode for editing
-"    autocmd BufReadPost,FileReadPost    *.gpg set nobin
-"    autocmd BufReadPost,FileReadPost    *.gpg let &ch = ch_save|unlet ch_save
-"    autocmd BufReadPost,FileReadPost    *.gpg execute ":doautocmd BufReadPost " . expand("%:r")
-
-"    " Convert all text to encrypted text before writing
-"    autocmd BufWritePre,FileWritePre    *.gpg set bin
-"    autocmd BufWritePre,FileWritePre    *.gpg let shsave=&sh
-"    autocmd BufWritePre,FileWritePre    *.gpg let &sh='sh'
-"    autocmd BufWritePre,FileWritePre    *.gpg '[,']!gpg --armor --encrypt --default-recipient-self 2>/dev/null
-"    autocmd BufWritePre,FileWritePre    *.gpg let &sh=shsave
-
-"    " Undo the encryption so we are back in the normal text, directly
-"    " after the file has been written.
-"    autocmd BufWritePost,FileWritePost  *.gpg   silent u
-"    autocmd BufWritePost,FileWritePost  *.gpg set nobin
-"augroup END
 
 augroup itsalltext
     autocmd!
