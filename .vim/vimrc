@@ -46,7 +46,7 @@ if v:version >= 700
   set numberwidth=3
 endif
 
-let mapleader=","
+let mapleader=" "
 " }}}
 
 " {{{ Unicode settings
