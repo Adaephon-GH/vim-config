@@ -27,6 +27,7 @@ set incsearch
 set laststatus=2
 set tabpagemax=50
 
+set hidden
 set viminfo='20,\"500   " Keep a .viminfo file.
 
 language messages C
