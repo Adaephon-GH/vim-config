@@ -10,6 +10,7 @@ Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-flagship'
+Plug 'ervandew/supertab'
 
 " color schemes
 Plug 'morhetz/gruvbox'

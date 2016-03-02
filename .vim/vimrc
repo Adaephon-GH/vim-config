@@ -131,13 +131,13 @@ set completeopt=menuone,preview
 autocmd InsertLeave * if pumvisible() == 0|pclose|endif
 
 " Functions
-function! Mosh_Tab_Or_Complete()
-  if col('.')>1 && strpart( getline('.'), col('.')-2, 3 ) =~ '^\w'
-    return "\<C-N>"
-  else
-    return "\<Tab>"
-  endif
-endfunction
+"function! Mosh_Tab_Or_Complete()
+"  if col('.')>1 && strpart( getline('.'), col('.')-2, 3 ) =~ '^\w'
+"    return "\<C-N>"
+"  else
+"    return "\<Tab>"
+"  endif
+"endfunction
 
 " Commands
 command Pc !perl -c %
@@ -148,7 +148,7 @@ nmap <F2> :w<CR>
 nmap <C-F2> :wa<CR>
 nmap <F4> :noh<CR>
 nmap <F3> @:
-inoremap <Tab> <C-R>=Mosh_Tab_Or_Complete()<CR>
+"inoremap <Tab> <C-R>=Mosh_Tab_Or_Complete()<CR>
 inoremap <C-Space> <C-X><C-O>
 
 " Format of text and source code
