@@ -13,6 +13,8 @@ Plug 'tpope/vim-flagship'
 
 " color schemes
 Plug 'morhetz/gruvbox'
+let g:gruvbox_italic=1
+let g:gruvbox_contrast_dark="hard"
 Plug 'sjl/badwolf'
 Plug 'tomasr/molokai'
 Plug 'Lokaltog/vim-distinguished', { 'branch': 'develop' }
