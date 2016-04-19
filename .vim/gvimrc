@@ -1,4 +1,4 @@
-set guifont=FantasqueSansMono\ 11
+set guifont=FantasqueSansMono\ 10
 
 set guioptions-=T   " no toolbar
 set guioptions-=l   " no scrollbar on the left
