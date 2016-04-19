@@ -4,6 +4,12 @@ Plug 'xolox/vim-misc' | Plug 'xolox/vim-colorscheme-switcher'
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
 Plug 'tpope/vim-speeddating'
+"Plug 'AndrewRadev/switch.vim'
+Plug 'zef/vim-cycle'
+let g:cycle_no_mappings=1
+nmap <unique> <Leader>cn <Plug>CycleNext
+nmap <unique> <Leader>cp <Plug>CyclePrevious
+
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-commentary'
