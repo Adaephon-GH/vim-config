@@ -160,6 +160,9 @@ au FileType python,perl,bash setlocal cino=#1 commentstring=\ ##%s
 set nrformats-=octal
 set formatoptions+=j
 
+" Open files unfolded
+set nofoldenable
+
 augroup itsalltext
     autocmd!
 
