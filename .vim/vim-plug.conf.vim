@@ -51,6 +51,10 @@ Plug 'AndrewRadev/linediff.vim', { 'on': 'Linediff' }
 Plug 'will133/vim-dirdiff'
 
 "" File type specific
+" All-round collection for different file types
+Plug 'sheerun/vim-polyglot'
+let g:polyglot_disabled = ['python']
+
 " bash
 Plug 'vim-scripts/bash-support.vim'
 " gnupg
@@ -64,9 +68,11 @@ Plug 'python-mode/python-mode', { 'for': 'python' }
 Plug 'saltstack/salt-vim', { 'for': 'sls' }
 Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
 " i3
-Plug 'PotatoesMaster/i3-vim-syntax'
+" superceded by vim-polyglot
+"Plug 'PotatoesMaster/i3-vim-syntax'
 " Haskell
-Plug 'neovimhaskell/haskell-vim'
+" superceded by vim-polyglot
+"Plug 'neovimhaskell/haskell-vim'
 
 " time tracking
 Plug 'vim-scripts/timelog.vim', { 'for': 'timelog' }
