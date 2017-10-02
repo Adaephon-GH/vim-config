@@ -58,7 +58,7 @@ Plug 'jamessan/vim-gnupg'
 " perl
 Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
 " python (http://unlogic.co.uk/2013/02/08/vim-as-a-python-ide/)
-Plug 'klen/python-mode', { 'for': 'python' }
+Plug 'python-mode/python-mode', { 'for': 'python' }
 "Plug 'davidhalter/jedi-vim'
 " Salt Stack
 Plug 'saltstack/salt-vim', { 'for': 'sls' }
