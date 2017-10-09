@@ -73,7 +73,7 @@ if &term ==? "xterm"
 endif
 
 if has('nvim') && $TERM ==? "xterm-termite"
-  let $NVIM_TUI_ENABLE_TRUE_COLOR=1
+  set termguicolors
 endif
 " }}}
 
