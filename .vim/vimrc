@@ -97,6 +97,12 @@ if has("eval")
 endif
 " }}}
 
+" {{{ Prevent using Python versions from virtual environments as this would
+" break plugins, which depend on python.
+"let g:python_host_prog = '/usr/bin/python2'
+let g:python3_host_prog = '/usr/bin/python3'
+"}}
+
 filetype plugin indent on
 
 set modeline
