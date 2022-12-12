@@ -16,6 +16,7 @@ Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-eunuch'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-flagship'
+Plug 'tpope/vim-characterize'
 Plug 'ervandew/supertab'
 
 " color schemes
@@ -73,6 +74,9 @@ Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
 " Haskell
 " superceded by vim-polyglot
 "Plug 'neovimhaskell/haskell-vim'
+
+" go
+Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
 
 " time tracking
 Plug 'vim-scripts/timelog.vim', { 'for': 'timelog' }
