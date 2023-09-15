@@ -4,3 +4,4 @@
 /.vim/vimrc.local
 /.vim/gvimrc.local
 /.vim/swap
+vim-config/.vim/plugged
