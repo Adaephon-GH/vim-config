@@ -45,6 +45,7 @@ let g:indent_guides_guide_size=1
 Plug 'luochen1990/rainbow'
 Plug 'lilydjwg/colorizer'
 let g:colorizer_startup = 0
+Plug 'michaeljsmith/vim-indent-object'
 
 
 " diff
