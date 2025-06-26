@@ -78,6 +78,7 @@ Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
 
 " go
 Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+let g:go_version_warning = 0 " remove this once no longer using vim on Ubuntu 22.04
 
 " time tracking
 Plug 'vim-scripts/timelog.vim', { 'for': 'timelog' }
