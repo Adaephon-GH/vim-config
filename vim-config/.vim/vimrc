@@ -184,6 +184,14 @@ if filereadable($HOME."/.vim/vim-plug.conf.vim")
   source ~/.vim/vim-plug.conf.vim
   call plug#end()
 endif
+" Run configuration and setup for plugins, that depend on a specific flavor of
+" (neo)vim
+if has('nvim')
+  lua << EOF
+  require('colorizer').setup()
+EOF
+else
+endif
 
 set background=dark
 colorscheme gruvbox

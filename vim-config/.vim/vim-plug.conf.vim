@@ -45,7 +45,11 @@ let g:indent_guides_guide_size=1
 Plug 'luochen1990/rainbow'
 " Plug 'lilydjwg/colorizer'
 " let g:colorizer_startup = 0
-Plug 'BourgeoisBear/clrzr'
+if has('nvim')
+    Plug 'catgoose/nvim-colorizer.lua'
+else
+    Plug 'BourgeoisBear/clrzr'
+endif
 Plug 'michaeljsmith/vim-indent-object'
 
 
