@@ -1,8 +1,17 @@
 *.swp
-/.vim/autoload/plug.vim.old
-/.vim/plugged
-/.vim/.netrwhist
-/.vim/vimrc.local
-/.vim/gvimrc.local
-/.vim/swap
+
+# --- classic Vim (vim-config/.vim) ---
+vim-config/.vim/autoload/plug.vim.old
 vim-config/.vim/plugged
+vim-config/.vim/.netrwhist
+vim-config/.vim/swap
+vim-config/.viminfo
+# machine-local overrides (sourced if present)
+vim-config/.vim/vimrc.local
+vim-config/.vim/gvimrc.local
+
+# --- Neovim (neovim-config/.config/nvim) ---
+# machine-local profile override (mirrors vimrc.local); see local.lua.example
+neovim-config/.config/nvim/lua/config/local.lua
+# note: lazy-lock.json IS committed on purpose (pins plugin versions);
+# plugins/state live under ~/.local/share/nvim, outside this repo.

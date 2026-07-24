@@ -1,0 +1,20 @@
+-- Example machine-specific override.
+--
+-- Copy this file to lua/config/local.lua (which is git-ignored) to tweak the
+-- active profile and language groups on a single machine WITHOUT touching the
+-- tracked config. Mirrors the old ~/.vim/vimrc.local convention.
+--
+-- The returned table may set:
+--   profile = "home" | "work" | "coder"   -- pick a base profile
+--   groups  = { <group> = true|false }    -- patch individual groups on top
+--
+-- Available optional groups: rust, haskell, latex, odoo, terraform
+-- (core languages are always enabled).
+
+return {
+  -- profile = "work",
+  -- groups = {
+  --   odoo = true,
+  --   latex = false,
+  -- },
+}
