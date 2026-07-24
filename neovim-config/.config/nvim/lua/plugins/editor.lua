@@ -51,7 +51,21 @@ return {
     "catgoose/nvim-colorizer.lua",
     event = { "BufReadPost", "BufNewFile" },
     cmd = { "ColorizerToggle", "ColorizerAttachToBuffer" },
-    opts = {},
+    opts = {
+      options = {
+        parsers = {
+          hex = { default = true, hash_aarrggbb = false, no_hash = false },
+          rgb = { enable = true },
+          hsl = { enable = true },
+          xterm = { enable = false },
+          xcolor = { enable = true },
+          custom = { require("util.ansi_zsh_colorizer") },
+        },
+        display = {
+          mode = { "background", "virtualtext" },
+        },
+      },
+    },
   },
 
   -- TODO/FIXME highlighting + search (replaces tasklist.vim)

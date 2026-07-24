@@ -18,6 +18,7 @@ neovim-config/.config/nvim/
   lua/config/    options, keymaps, autocmds, profile, lazy bootstrap
   lua/plugins/   plugin specs (one file per concern)
   lua/plugins/lang/  per-language specs, enabled per host profile
+  lua/util/      standalone helper modules used by plugin specs (e.g. custom colorizer parser)
 ```
 
 ### Per-host profiles
