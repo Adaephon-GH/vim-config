@@ -2,10 +2,13 @@ scriptencoding utf-8
 " ^^ Please leave the above line at the start of the file.
 " vim: set fenc=utf-8 tw=80 sw=2 sts=2 et foldmethod=marker :
 
+" This is the LEAN configuration for classic Vim. Neovim has its OWN separate
+" Lua configuration under ~/.config/nvim and no longer sources this file.
+" Vim is kept deliberately light (no LSP / completion engine) so it stays fast
+" for quick edits and works on older Vim (e.g. Ubuntu 22.04). Reach for Neovim
+" when you want IDE features.
+
 " {{{ General settings
-" The following are some sensible defaults for Vim for most users.
-" We attempt to change as little as possible from Vim's defaults,
-" deviating only where it makes sense
 set nocompatible        " Use Vim defaults (much better!)
 set bs=2                " Allow backspacing over everything in insert mode
 set ai                  " Always set auto-indenting on
@@ -59,18 +62,11 @@ if maparg('<C-L>', 'n') ==# ''
 endif
 " }}}
 
-" {{{ Terminal fixes
-if &term ==? "xterm"
-  set t_Sb=^[4%dm
-  set t_Sf=^[3%dm
-  set ttymouse=xterm2
-endif
-
+" {{{ True colors
 if has('termguicolors') && ($COLORTERM == "truecolor" || $COLORTERM == "24bit")
   set termguicolors
 endif
 " }}}
-
 
 " {{{ Fix &shell, see bug #101665.
 if "" == &shell
@@ -91,18 +87,16 @@ if has("eval")
 endif
 " }}}
 
-" {{{ Prevent using Python versions from virtual environments as this would
-" break plugins, which depend on python.
-"let g:python_host_prog = '/usr/bin/python2'
+" {{{ Use the system Python for the python3 provider so plugins depending on
+" python keep working even inside virtualenvs.
 let g:python3_host_prog = '/usr/bin/python3'
-"}}
+" }}}
 
 filetype plugin indent on
 
 set modeline
 set modelines=5
 
-colorscheme Dark6
 set number
 set listchars=tab:»·,precedes:«,extends:»,eol:¬,nbsp:␣
 augroup trailing
@@ -127,23 +121,12 @@ set splitbelow
 set wildmode=list:longest,full
 set wildmenu
 
-set completeopt=menuone,preview
-"autocmd CursorMovedI * if pumvisible() == 0|pclose|endif 
+set completeopt=menuone,popup,noselect
 autocmd InsertLeave * if pumvisible() == 0|pclose|endif
-
-" Functions
-"function! Mosh_Tab_Or_Complete()
-"  if col('.')>1 && strpart( getline('.'), col('.')-2, 3 ) =~ '^\w'
-"    return "\<C-N>"
-"  else
-"    return "\<Tab>"
-"  endif
-"endfunction
 
 " Keymaps
 nmap <F4> :noh<CR>
 nmap <F3> @:
-"inoremap <Tab> <C-R>=Mosh_Tab_Or_Complete()<CR>
 inoremap <C-Space> <C-X><C-O>
 
 " Format of text and source code
@@ -163,14 +146,18 @@ set formatoptions+=j
 " Open files unfolded
 set nofoldenable
 
-augroup itsalltext
-    autocmd!
-
-    " Set textwidth=0 for text files edited with the itsalltext firefox-
-    " plugin because automatik linebreaks tend to complicate editing
-    " sometimes, for example wiki-entries
-    autocmd BufNewFile,BufRead ~/.mozilla/firefox/*/itsalltext/*.txt set tw=0
+" {{{ Spell checking (English US + German)
+set spelllang=en_us,de_de
+augroup prose_spell
+  au!
+  au FileType markdown,rst,text,gitcommit,mail setlocal spell
 augroup END
+" }}}
+
+" {{{ Better diffs: use the internal diff library with the histogram algorithm
+" for smaller, more readable diffs than the old external diff.
+set diffopt+=internal,algorithm:histogram
+" }}}
 
 " Treat files in ~/.Xresources.d as xdefaults
 autocmd BufRead,BufNewFile */.Xresources.d/* set filetype=xdefaults
@@ -186,11 +173,13 @@ if filereadable($HOME."/.vim/vim-plug.conf.vim")
 endif
 
 set background=dark
-colorscheme gruvbox
+" silent! so the very first launch (before :PlugInstall) does not error out.
+silent! colorscheme gruvbox
 
 " diagnostics {{{
-function! SynGroup()                                                            
-    let l:s = synID(line('.'), col('.'), 1)                                       
+" Echo the syntax group under the cursor (handy when tweaking colorschemes).
+function! SynGroup()
+    let l:s = synID(line('.'), col('.'), 1)
     echo synIDattr(l:s, 'name') . ' -> ' . synIDattr(synIDtrans(l:s), 'name')
 endfun
 

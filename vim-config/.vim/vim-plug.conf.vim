@@ -1,84 +1,59 @@
-"" general plugins
-" extended features
-Plug 'xolox/vim-misc' | Plug 'xolox/vim-colorscheme-switcher'
+"" Lean plugin set for classic Vim (managed by vim-plug).
+"" Neovim has its OWN Lua config under ~/.config/nvim -- do NOT add IDE/LSP
+"" plugins here. Vim is kept light so it stays fast for quick edits and works on
+"" older Vim (e.g. Ubuntu 22.04). Everything below is pure-vimscript, low-churn
+"" and dependency-free.
+
+" {{{ Editing / motions (tpope & friends)
 Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
-Plug 'tpope/vim-speeddating'
-"Plug 'AndrewRadev/switch.vim'
-Plug 'zef/vim-cycle'
-let g:cycle_no_mappings=1
-nmap <unique> <Leader>cn <Plug>CycleNext
-nmap <unique> <Leader>cp <Plug>CyclePrevious
-
 Plug 'tpope/vim-abolish'
 Plug 'tpope/vim-unimpaired'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-eunuch'
-Plug 'tpope/vim-fugitive'
-Plug 'tpope/vim-flagship'
 Plug 'tpope/vim-characterize'
-Plug 'ervandew/supertab'
+Plug 'michaeljsmith/vim-indent-object'
 
-" color schemes
+" Tab-triggered insert completion (pure vimscript; keeps the <Tab> muscle
+" memory). 'context' makes <Tab> use omni-completion after a '.', keyword
+" completion otherwise.
+Plug 'ervandew/supertab'
+let g:SuperTabDefaultCompletionType = "context"
+let g:SuperTabContextDefaultCompletionType = "<c-n>"
+
+" Cycle/toggle words and values (replaces the abandoned zef/vim-cycle).
+Plug 'AndrewRadev/switch.vim'
+" Preserve the old <Leader>cn / <Leader>cp chords. switch.vim cycles a value
+" through its list; most switches are two-state, so this covers both cases.
+nmap <unique> <Leader>cn :Switch<CR>
+nmap <unique> <Leader>cp :Switch<CR>
+" }}}
+
+" {{{ Git
+Plug 'tpope/vim-fugitive'
+" }}}
+
+" {{{ UI: statusline + colorscheme
+Plug 'tpope/vim-flagship'
 Plug 'gruvbox-community/gruvbox'
 let g:gruvbox_italic=1
 let g:gruvbox_contrast_dark="hard"
-Plug 'sjl/badwolf'
-Plug 'tomasr/molokai'
-Plug 'Lokaltog/vim-distinguished', { 'branch': 'develop' }
-Plug 'vim-scripts/xoria256.vim'
-Plug 'gotchacode/vim-tomorrow-theme'
-Plug 'w0ng/vim-hybrid'
-Plug 'alem0lars/vim-colorscheme-darcula'
+" }}}
 
+" {{{ File explorer (loaded on demand)
+Plug 'preservim/nerdtree', { 'on': 'NERDTreeToggle' }
+nnoremap <Leader>e :NERDTreeToggle<CR>
+" }}}
 
-" development
-Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
-" replace it with commentary?
-"Plug 'scrooloose/nerdcommenter'
-Plug 'wesleyche/SrcExpl'
-Plug 'vim-scripts/taglist.vim'
-Plug 'vim-scripts/tasklist.vim'
-
-Plug 'nathanaelkane/vim-indent-guides'
-let g:indent_guides_guide_size=1
-Plug 'luochen1990/rainbow'
-Plug 'lilydjwg/colorizer'
-let g:colorizer_startup = 0
-Plug 'michaeljsmith/vim-indent-object'
-
-
-" diff
+" {{{ Diff helpers
 Plug 'AndrewRadev/linediff.vim', { 'on': 'Linediff' }
 Plug 'will133/vim-dirdiff'
+" }}}
 
-"" File type specific
-" All-round collection for different file types
+" {{{ Filetypes & misc
+" Broad syntax / ftplugin coverage for many languages (loads per-filetype):
+" YAML, Terraform, Helm, Jinja, JSON, TOML, Markdown, reST, and many more.
 Plug 'sheerun/vim-polyglot'
-let g:polyglot_disabled = ['python']
-
-" bash
-Plug 'vim-scripts/bash-support.vim'
-" gnupg
+" Transparent editing of gpg-encrypted files.
 Plug 'jamessan/vim-gnupg'
-" perl
-Plug 'vim-scripts/perl-support.vim', { 'for': 'perl' }
-" python (http://unlogic.co.uk/2013/02/08/vim-as-a-python-ide/)
-" Plug 'python-mode/python-mode', { 'for': 'python', 'branch': 'develop'}
-"Plug 'davidhalter/jedi-vim'
-" Salt Stack
-Plug 'saltstack/salt-vim', { 'for': 'sls' }
-Plug 'Glench/Vim-Jinja2-Syntax', { 'for': ['sls', 'jinja'] }
-" i3
-" superceded by vim-polyglot
-"Plug 'PotatoesMaster/i3-vim-syntax'
-" Haskell
-" superceded by vim-polyglot
-"Plug 'neovimhaskell/haskell-vim'
-
-" go
-Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
-let g:go_version_warning = 0 " remove this once no longer using vim on Ubuntu 22.04
-
-" time tracking
-Plug 'vim-scripts/timelog.vim', { 'for': 'timelog' }
+" }}}
