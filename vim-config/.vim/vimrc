@@ -188,7 +188,23 @@ endif
 " (neo)vim
 if has('nvim')
   lua << EOF
-  require('colorizer').setup()
+require('colorizer').setup(
+  {
+      options = {
+        parsers = {
+          hex = { default = true, hash_aarrggbb = false, no_hash = false },
+          rgb = { enable = true },
+          hsl = { enable = true },
+          xterm = { enable = false },
+          xcolor = { enable = true },
+          custom = {require("ansi_zsh_colorizer") },
+        },
+        display = {
+          mode = { "background", "virtualtext" },
+        },
+      },
+  }
+)
 EOF
 else
 endif
