@@ -2,11 +2,22 @@
 -- Core languages are always enabled; latex/terraform servers are profile-gated.
 -- Rust and Haskell are handled by dedicated plugins in lua/plugins/lang/.
 return {
+  -- Mason as its own spec so `:Mason` and friends are available on demand
+  -- (even before any file is opened). It is also a dependency of nvim-lspconfig
+  -- below, so it is set up before the servers are wired up.
+  {
+    "williamboman/mason.nvim",
+    build = ":MasonUpdate",
+    cmd = { "Mason", "MasonInstall", "MasonUninstall", "MasonUninstallAll", "MasonLog", "MasonUpdate" },
+    keys = { { "<leader>M", "<Cmd>Mason<CR>", desc = "Mason (LSP/tool installer)" } },
+    opts = {},
+  },
+
   {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
     dependencies = {
-      { "williamboman/mason.nvim", config = true },
+      "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
       "saghen/blink.cmp",
     },
@@ -47,7 +58,7 @@ return {
         vim.lsp.config(name, cfg)
       end
 
-      require("mason").setup()
+      -- mason itself is set up by its own spec (opts = {}) before this runs.
       require("mason-lspconfig").setup({
         ensure_installed = vim.tbl_keys(servers),
         automatic_enable = true,

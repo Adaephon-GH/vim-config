@@ -50,5 +50,10 @@ treesitter highlighting, just without that server's IDE features.
 ## First run
 
 - **Neovim:** launch `nvim`; lazy.nvim bootstraps itself and installs plugins.
-  Then run `:Mason` and let servers install.
+  **Open a file of your language** (e.g. a `.py`) — this loads the LSP layer, and
+  Mason then **auto-installs** the servers for your profile in the background
+  (`ensure_installed`). IDE features (go-to-definition, completion, hover) light
+  up once the relevant server finishes installing. Watch progress with `:MasonLog`.
+  `:Mason` opens the installer UI at any time (also `<leader>M`) — it no longer
+  requires a file to be open.
 - **Vim:** launch `vim`; run `:PlugInstall`.
