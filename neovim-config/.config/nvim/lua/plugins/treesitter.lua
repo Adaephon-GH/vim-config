@@ -15,7 +15,7 @@ return {
         "json", "jsonc", "yaml", "toml", "xml", "html", "css",
         "sql", "markdown", "markdown_inline", "rst",
         "lua", "vim", "vimdoc", "regex", "comment", "diff",
-        "dockerfile", "terraform", "hcl",
+        "dockerfile", "terraform", "hcl", "helm",
         "gitcommit", "gitignore", "git_rebase",
         "rust", "haskell", "bibtex", "groovy",
       },

@@ -35,6 +35,11 @@ always on.
 
 ### External tools
 
+Note: Neovim has no built-in Helm filetype (on the Vim side this comes from
+vim-polyglot). `helm-ls.nvim` supplies the detection, gated on a `Chart.yaml`
+being present, which is what lets `helm_ls` attach and keeps `yamlls` off chart
+templates.
+
 `:Mason` installs the language servers, but they need the matching runtime
 present (Node ≥ 18, Python 3, a JRE for the XML server, a C compiler for
 treesitter, plus rustup / GHCup / TeX Live for the Rust / Haskell / LaTeX
