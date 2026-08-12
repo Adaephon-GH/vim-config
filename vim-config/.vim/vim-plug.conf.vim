@@ -45,6 +45,19 @@ Plug 'preservim/nerdtree', { 'on': 'NERDTreeToggle' }
 nnoremap <Leader>e :NERDTreeToggle<CR>
 " }}}
 
+" {{{ Sticky context header (loaded on demand)
+" Pins the enclosing class/function of the top visible line, like PyCharm's
+" "Sticky Lines". Indent-based rather than syntax-aware (Neovim gets the
+" treesitter version instead). Kept off until asked for: it hooks cursor
+" movement and scrolling, which this config exists to stay out of the way of.
+" Same <Leader>uc chord as Neovim; the 'on' stub loads the plugin on first use.
+Plug 'wellle/context.vim', { 'on': ['ContextEnable', 'ContextToggle', 'ContextPeek'] }
+let g:context_enabled = 0
+let g:context_max_height = 11
+let g:context_max_per_indent = 5
+nnoremap <Leader>uc :ContextToggle<CR>
+" }}}
+
 " {{{ Diff helpers
 Plug 'AndrewRadev/linediff.vim', { 'on': 'Linediff' }
 Plug 'will133/vim-dirdiff'

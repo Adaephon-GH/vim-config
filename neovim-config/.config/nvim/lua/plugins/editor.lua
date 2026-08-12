@@ -46,6 +46,33 @@ return {
   -- Rainbow parentheses/brackets (treesitter-based; replaces luochen1990/rainbow)
   { "HiPhish/rainbow-delimiters.nvim", event = { "BufReadPost", "BufNewFile" } },
 
+  -- Sticky context header: pins the enclosing class/function of the topmost
+  -- visible line, like PyCharm's "Sticky Lines". Neither Neovim nor Vim has
+  -- this natively. Uses the treesitter tree, so it needs no extra parsers
+  -- beyond those in plugins/treesitter.lua.
+  {
+    "nvim-treesitter/nvim-treesitter-context",
+    event = { "BufReadPost", "BufNewFile" },
+    keys = {
+      -- Upstream suggests `[c`, but that is gitsigns' previous-hunk (plugins/git.lua).
+      {
+        "[C",
+        function() require("treesitter-context").go_to_context(vim.v.count1) end,
+        desc = "Jump to context (enclosing scope)",
+      },
+      { "<leader>uc", "<Cmd>TSContext toggle<CR>", desc = "Toggle sticky context" },
+    },
+    opts = {
+      -- Default is "cursor"; PyCharm pins the parents of the *first visible
+      -- line*, which is what "topline" does.
+      mode = "topline",
+      max_lines = 4, -- keep the header from eating the window when deeply nested
+      multiline_threshold = 1, -- collapse multi-line signatures to their first line
+      trim_scope = "outer",
+      separator = "─",
+    },
+  },
+
   -- Color-code highlighting (replaces lilydjwg/colorizer; ends the vim/nvim split)
   {
     "catgoose/nvim-colorizer.lua",

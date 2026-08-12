@@ -10,6 +10,12 @@ Two **separate** configurations that share this repo but not their code:
 The folder layout mirrors `$HOME`, so both trees are meant to be symlinked/stowed
 into your home directory (e.g. with GNU stow).
 
+Both editors share a few chords on purpose, e.g. `<leader>uc` toggles a sticky
+context header (the enclosing class/function of the top visible line, like
+PyCharm's "Sticky Lines"). In Neovim it is treesitter-based and on by default; in
+Vim it is indent-based and stays unloaded until you ask for it, so startup is
+unaffected.
+
 ## Neovim layout
 
 ```
