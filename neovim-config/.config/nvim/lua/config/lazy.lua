@@ -29,7 +29,9 @@ require("lazy").setup({
   performance = {
     rtp = {
       -- Built-in plugins we don't need; keeps startup lean for quick edits.
-      disabled_plugins = { "gzip", "tarPlugin", "zipPlugin", "tohtml", "tutor" },
+      -- gzip/tarPlugin/zipPlugin stay enabled: they provide archive browsing
+      -- (~0.5 ms of startup), see the archive_readonly autocmd in autocmds.lua.
+      disabled_plugins = { "tohtml", "tutor" },
     },
   },
 })

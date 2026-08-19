@@ -57,3 +57,18 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "q", "<Cmd>close<CR>", { buffer = event.buf, silent = true })
   end,
 })
+
+-- Members of a *compressed* tarball cannot be written back (tar.vim can only
+-- update an uncompressed .tar). Say so up front instead of erroring at :w.
+vim.api.nvim_create_autocmd("BufFilePost", {
+  group = augroup("archive_readonly"),
+  pattern = "tarfile::*",
+  callback = function(event)
+    local src = vim.b[event.buf].tarfile
+    local archive = src and src:match("^tarfile:(.-)::")
+    if archive and not archive:lower():match("%.tar$") then
+      vim.bo[event.buf].modifiable = false
+      vim.bo[event.buf].readonly = true
+    end
+  end,
+})
