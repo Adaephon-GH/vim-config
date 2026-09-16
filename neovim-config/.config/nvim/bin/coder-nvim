@@ -1,0 +1,368 @@
+#!/usr/bin/env bash
+# Open a Neovim session running *on* a Coder workspace.
+#
+# A headless Neovim runs on the workspace and survives disconnects; this script
+# attaches a UI client to it over ssh. The local Neovim AppImage is shipped to
+# the workspace so both ends are the same build, and the local config is synced
+# there, so it is your Neovim, just executing where the code and toolchain are.
+#
+# Replaces remote-nvim.nvim (archived upstream). Needs nothing but ssh; uses
+# kitten ssh and kitty when they happen to be present.
+
+set -euo pipefail
+
+readonly PROG=${0##*/}
+readonly LOCAL_CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/coder-nvim
+
+# Paths on the workspace. $HOME there is a persistent volume, so anything under
+# these survives a workspace stop/start.
+readonly R_ROOT='$HOME/.local/share/coder-nvim'
+readonly R_CONFIG="$R_ROOT/xdg/config/nvim"
+# The workspace half of this script lives beside us in the Neovim config, so the
+# config sync delivers it -- there is nothing separate to install over there.
+# Invoked via `sh` so it does not matter whether the sync preserved the exec bit.
+readonly R_HELPER="$R_CONFIG/bin/coder-nvim-remote"
+
+die() { printf '%s: %s\n' "$PROG" "$*" >&2; exit 1; }
+note() { printf '%s: %s\n' "$PROG" "$*" >&2; }
+
+usage() {
+	cat <<EOF
+Usage: $PROG [options] [<workspace>] [file...]
+
+Attaches a Neovim UI to a persistent Neovim server running on a Coder
+workspace. With no workspace (or an unknown one) you are asked to pick one.
+
+Options:
+  -w, --new-window   open in a new kitty OS window instead of this terminal
+  -t, --tunnel       forward the server socket, print its local path, and hold
+                     (used by :CoderStart inside Neovim)
+  -n, --no-sync      skip the config sync
+  -s, --stop         stop the workspace's Neovim server
+      --status       report server state
+      --list         print "name<TAB>status" for each workspace and exit
+  -h, --help         this text
+
+Examples:
+  $PROG                     pick a workspace, attach here
+  $PROG mruf-slim           attach to mruf-slim
+  $PROG -w mruf-slim        attach in a new kitty window
+EOF
+}
+
+# --- workspace selection -----------------------------------------------------
+
+coder_bin() {
+	command -v coder >/dev/null 2>&1 || die "the 'coder' CLI is not on PATH"
+	command coder "$@"
+}
+
+# Prints "name<TAB>status" per workspace.
+list_workspaces() {
+	coder_bin list -o json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    ws = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+for w in ws:
+    print("%s\t%s" % (w["name"], w["latest_build"]["status"]))
+'
+}
+
+pick_workspace() {
+	local list
+	list=$(list_workspaces) || die "could not list workspaces (are you logged in? try 'coder login')"
+	[ -n "$list" ] || die "no workspaces found"
+
+	# Single workspace: don't make it a question.
+	if [ "$(printf '%s\n' "$list" | wc -l)" -eq 1 ]; then
+		printf '%s\n' "$list" | cut -f1
+		return
+	fi
+
+	if command -v fzf >/dev/null 2>&1; then
+		printf '%s\n' "$list" | column -t -s "$(printf '\t')" |
+			fzf --prompt='workspace> ' --height=40% --reverse | awk '{print $1}'
+		return
+	fi
+
+	# No fzf here, so fall back to the shell's own menu.
+	local names=() labels=() name status choice
+	while IFS=$'\t' read -r name status; do
+		names+=("$name")
+		labels+=("$name ($status)")
+	done <<<"$list"
+
+	# Do NOT redirect this loop's stdout. `select` already writes its menu and
+	# PS3 to stderr, so the prompt stays out of the way on its own -- adding
+	# `>&2` here would also capture the printf below, which is what this
+	# function returns, and the caller would silently get an empty name.
+	local PS3='workspace> '
+	select choice in "${labels[@]}"; do
+		if [ -n "$choice" ]; then
+			printf '%s\n' "${names[$((REPLY - 1))]}"
+			return
+		fi
+	done </dev/tty
+	die "no workspace selected"
+}
+
+resolve_workspace() {
+	local want=${1-}
+	if [ -n "$want" ]; then
+		if list_workspaces | cut -f1 | grep -qxF "$want"; then
+			printf '%s\n' "$want"
+			return
+		fi
+		note "unknown workspace '$want'"
+	fi
+	pick_workspace
+}
+
+# --- ssh ---------------------------------------------------------------------
+
+# One multiplexed connection for the whole run. Coder's ProxyCommand handshake
+# is slow, and this script makes several round trips before attaching.
+ssh_setup() {
+	CTL=$(mktemp -u "${TMPDIR:-/tmp}/coder-nvim-%C.XXXXXX")
+	SSH_OPTS=(-o ControlMaster=auto -o ControlPath="$CTL" -o ControlPersist=120)
+	trap 'ssh -O exit -o ControlPath="$CTL" "$HOST" >/dev/null 2>&1 || true' EXIT
+}
+
+rsh() { ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
+
+require_host() {
+	# Without this, an empty name builds the host "coder.", which still matches
+	# the `Host coder.*` block in ~/.ssh/config and fails much later with an
+	# unhelpful kex_exchange_identification error.
+	[ -n "${WS:-}" ] || die "no workspace selected"
+	HOST="coder.$WS"
+	if ! ssh -G "$HOST" 2>/dev/null | grep -q '^proxycommand'; then
+		die "ssh host '$HOST' has no ProxyCommand; run 'coder config-ssh' first"
+	fi
+}
+
+# --- shipping ----------------------------------------------------------------
+
+local_nvim() {
+	local n
+	n=$(command -v nvim) || die "no local nvim on PATH to ship"
+	readlink -f "$n"
+}
+
+# Everything the remote needs to tell us, in one round trip.
+probe_remote() {
+	rsh "sh -s" <<EOF
+printf 'rsync=%s\n' "\$(command -v rsync >/dev/null 2>&1 && echo yes || echo no)"
+printf 'nvim=%s\n' "\$(test -x $R_ROOT/nvim-$NVIM_SHA/squashfs-root/AppRun && echo yes || echo no)"
+printf 'helper=%s\n' "\$(test -r $R_HELPER && echo yes || echo no)"
+printf 'terminfo=%s\n' "\$(infocmp -1 ${TERM:-dumb} >/dev/null 2>&1 && echo yes || echo no)"
+EOF
+}
+
+# Terminals like kitty ship a terminfo entry the workspace has never heard of
+# (Debian has no ncurses-term here), and nvim needs it to drive the screen. Send
+# ours rather than depending on the terminal's own ssh wrapper to do it.
+# ~/.terminfo is on the persistent home volume, so this happens once.
+ship_terminfo() {
+	local term=${TERM:-}
+	[ -n "$term" ] || return 0
+
+	if ! infocmp -x "$term" >/dev/null 2>&1; then
+		note "no local terminfo for '$term'; the remote session will use xterm-256color"
+		REMOTE_TERM=xterm-256color
+		return 0
+	fi
+
+	note "installing '$term' terminfo on $WS"
+	if ! infocmp -x "$term" | rsh "mkdir -p ~/.terminfo && tic -x -o ~/.terminfo - 2>/dev/null"; then
+		note "could not install terminfo; falling back to xterm-256color"
+		REMOTE_TERM=xterm-256color
+	fi
+}
+
+ship_nvim() {
+	local src=$1
+	note "shipping $(basename "$src") ($(du -h "$src" | cut -f1)) to $WS — one time per nvim build"
+	rsh "mkdir -p $R_ROOT/nvim-$NVIM_SHA && cat > $R_ROOT/nvim-$NVIM_SHA/nvim.appimage && chmod +x $R_ROOT/nvim-$NVIM_SHA/nvim.appimage" \
+		<"$src"
+	rsh "sh $R_HELPER extract $NVIM_SHA"
+}
+
+# Cheap fingerprint of the config tree, so an unchanged config costs nothing.
+config_stamp() {
+	local dir=$1
+	(cd "$dir" && find . -type f ! -path './.git/*' -printf '%P %s %T@\n' 2>/dev/null | LC_ALL=C sort | sha256sum | cut -c1-32)
+}
+
+sync_config() {
+	local src stamp stampfile
+	src=$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/nvim")
+	[ -d "$src" ] || die "no local nvim config at $src"
+
+	stamp=$(config_stamp "$src")
+	stampfile=$LOCAL_CACHE/$WS.config
+	if [ "${FORCE_SYNC:-0}" -eq 0 ] && [ -f "$stampfile" ] && [ "$(cat "$stampfile")" = "$stamp" ]; then
+		return
+	fi
+
+	local dst="$R_CONFIG"
+	rsh "mkdir -p $dst"
+	if [ "$HAS_RSYNC" = yes ]; then
+		rsync -az --delete -e "ssh ${SSH_OPTS[*]}" "$src/" "$HOST:${dst//\$HOME/\~}/"
+	else
+		# rsync is not on the workspace and cannot be copied there (it links
+		# against 8 shared libs), so fall back to tar. The stamp above keeps
+		# this from running on every connect.
+		tar czf - --no-xattrs --numeric-owner --no-acls --no-same-owner \
+			--no-same-permissions -C "$src" . |
+			rsh "tar xzf - -C $dst"
+	fi
+	mkdir -p "$LOCAL_CACHE"
+	printf '%s\n' "$stamp" >"$stampfile"
+}
+
+# --- modes -------------------------------------------------------------------
+
+prepare() {
+	local nvim_src probe
+	nvim_src=$(local_nvim)
+	NVIM_SHA=$(sha256sum "$nvim_src" | cut -c1-16)
+
+	note "connecting to $WS (a stopped workspace is started automatically, which takes a while)"
+	probe=$(probe_remote) || die "cannot reach $HOST"
+	HAS_RSYNC=$(printf '%s\n' "$probe" | sed -n 's/^rsync=//p')
+	local has_nvim has_helper has_terminfo
+	has_nvim=$(printf '%s\n' "$probe" | sed -n 's/^nvim=//p')
+	has_helper=$(printf '%s\n' "$probe" | sed -n 's/^helper=//p')
+	has_terminfo=$(printf '%s\n' "$probe" | sed -n 's/^terminfo=//p')
+
+	# The config sync is what puts the workspace half of this script over there,
+	# so it has to happen first -- extracting the AppImage already needs it.
+	# When the workspace has no copy (fresh, or wiped) the sync must happen no
+	# matter what: --no-sync would skip it, and the local stamp may still claim
+	# the config is already in place from a previous workspace generation.
+	if [ "$has_helper" != yes ]; then
+		[ "${NO_SYNC:-0}" -eq 1 ] &&
+			note "syncing anyway: $WS has no copy of coder-nvim-remote yet"
+		NO_SYNC=0
+		FORCE_SYNC=1
+	fi
+	[ "${NO_SYNC:-0}" -eq 1 ] || sync_config
+
+	[ "$has_nvim" = yes ] || ship_nvim "$nvim_src"
+	[ "$has_terminfo" = yes ] || ship_terminfo
+}
+
+mode_attach() {
+	# The UI client needs a real terminal: without one ssh allocates no pty, and
+	# nvim renders but never sees a keystroke or a resize.
+	if [ ! -t 0 ] || [ ! -t 1 ]; then
+		die "attaching needs a terminal; use --tunnel (what :CoderStart uses) or -w"
+	fi
+
+	prepare
+
+	local cmd="sh $R_HELPER attach $NVIM_SHA"
+	local arg
+	for arg in "$@"; do cmd+=" $(printf '%q' "$arg")"; done
+
+	# Drop the multiplexed connection first so the interactive session is a
+	# plain one, then hand the terminal over. -t is what makes it a session
+	# rather than a pipe; `ssh host <command>` allocates no pty on its own.
+	ssh -O exit -o ControlPath="$CTL" "$HOST" >/dev/null 2>&1 || true
+	trap - EXIT
+	exec ssh -t "$HOST" "${REMOTE_TERM:+TERM=$REMOTE_TERM }$cmd"
+}
+
+mode_new_window() {
+	command -v kitty >/dev/null 2>&1 || die "--new-window needs kitty on PATH"
+	exec kitty --detach --title "nvim@$WS" -- "$0" "$WS" "$@"
+}
+
+mode_tunnel() {
+	prepare
+	rsh "sh $R_HELPER serve $NVIM_SHA" >/dev/null
+
+	mkdir -p "$LOCAL_CACHE"
+	local lsock=$LOCAL_CACHE/$WS.sock
+	rm -f "$lsock"
+
+	local rsock
+	rsock=$(rsh "sh $R_HELPER socket")
+	# Deliberately NOT multiplexed: over a shared connection the master owns the
+	# forward and this process returns at once, so there is nothing to wait on.
+	# -n keeps it independent of our stdin, so a closing pipe cannot tear it down.
+	ssh -o ControlMaster=no -o ControlPath=none -n -N -L "$lsock:$rsock" "$HOST" &
+	local fwd=$!
+	trap 'kill '"$fwd"' 2>/dev/null || true' EXIT
+
+	local _
+	for _ in $(seq 1 50); do
+		[ -S "$lsock" ] && break
+		kill -0 "$fwd" 2>/dev/null || die "port forward died"
+		sleep 0.2
+	done
+	[ -S "$lsock" ] || die "socket did not appear at $lsock"
+
+	printf '%s\n' "$lsock"
+	wait "$fwd"
+}
+
+mode_stop() {
+	rsh "test -r $R_HELPER && sh $R_HELPER stop || echo 'no server (helper not installed)'"
+}
+
+mode_status() {
+	rsh "test -r $R_HELPER && sh $R_HELPER status || echo 'no server (helper not installed)'"
+}
+
+# --- main --------------------------------------------------------------------
+
+main() {
+	local action=attach ws=
+	while [ $# -gt 0 ]; do
+		case $1 in
+		-w | --new-window) action=new-window ;;
+		-t | --tunnel) action=tunnel ;;
+		-n | --no-sync) NO_SYNC=1 ;;
+		-s | --stop) action=stop ;;
+		--status) action=status ;;
+		--list)
+			list_workspaces
+			exit 0
+			;;
+		--sync) FORCE_SYNC=1 ;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		--)
+			shift
+			break
+			;;
+		-*) die "unknown option '$1' (try --help)" ;;
+		*)
+			ws=$1
+			shift
+			break
+			;;
+		esac
+		shift
+	done
+
+	WS=$(resolve_workspace "$ws")
+	require_host
+	ssh_setup
+
+	case $action in
+	attach) mode_attach "$@" ;;
+	new-window) mode_new_window "$@" ;;
+	tunnel) mode_tunnel ;;
+	stop) mode_stop ;;
+	status) mode_status ;;
+	esac
+}
+
+main "$@"

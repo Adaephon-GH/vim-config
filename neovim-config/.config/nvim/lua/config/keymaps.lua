@@ -23,3 +23,6 @@ map("n", "<leader>d", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 
 -- Terminal: leave insert mode with <Esc><Esc>
 map("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+
+-- Remote development on Coder workspaces (see lua/config/coder.lua)
+map("n", "<leader>rs", "<Cmd>CoderStart<CR>", { desc = "Coder: attach to workspace" })

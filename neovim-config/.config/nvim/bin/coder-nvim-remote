@@ -1,0 +1,134 @@
+#!/bin/sh
+# Workspace-side half of coder-nvim. Shipped to the workspace by the local
+# coder-nvim script and invoked over ssh; not meant to be run by hand, though
+# `status` and `stop` are safe to.
+#
+# Keeps one headless Neovim alive per workspace, detached from any ssh session,
+# and attaches UI clients to it.
+
+set -eu
+
+ROOT=$HOME/.local/share/coder-nvim
+STATE=$HOME/.local/state/coder-nvim
+SOCK=$STATE/server.sock
+LOG=$STATE/server.log
+
+die() { printf 'coder-nvim-remote: %s\n' "$*" >&2; exit 1; }
+
+nvim_bin() {
+	sha=${1:?sha required}
+	printf '%s\n' "$ROOT/nvim-$sha/squashfs-root/AppRun"
+}
+
+# The workspace has no FUSE, so the AppImage cannot mount itself. Extracting it
+# needs no FUSE, and AppRun sets up the bundled libraries.
+cmd_extract() {
+	sha=${1:?sha required}
+	dir=$ROOT/nvim-$sha
+	[ -x "$dir/squashfs-root/AppRun" ] && return 0
+	[ -f "$dir/nvim.appimage" ] || die "no AppImage at $dir/nvim.appimage"
+	( cd "$dir" && ./nvim.appimage --appimage-extract >/dev/null ) ||
+		die "could not extract the Neovim AppImage"
+	[ -x "$dir/squashfs-root/AppRun" ] || die "extraction produced no AppRun"
+}
+
+server_responds() {
+	[ -S "$SOCK" ] || return 1
+	"$1" --server "$SOCK" --remote-expr 1 >/dev/null 2>&1
+}
+
+cmd_serve() {
+	sha=${1:?sha required}
+	cmd_extract "$sha"
+	nvim=$(nvim_bin "$sha")
+
+	if server_responds "$nvim"; then
+		return 0
+	fi
+
+	mkdir -p "$STATE" "$ROOT/xdg/config" "$ROOT/xdg/data" "$ROOT/xdg/state" "$ROOT/xdg/cache"
+	rm -f "$SOCK"
+
+	# Detached from this ssh session on purpose: the server outlives the
+	# connection, so reattaching gets the same buffers back.
+	if command -v setsid >/dev/null 2>&1; then
+		launch="setsid"
+	else
+		launch="nohup"
+	fi
+	# CODER_NVIM_REMOTE marks this as the workspace-side server so the config can
+	# tell it apart from a local session and not offer :CoderStart here. The
+	# `coder` CLI is present on workspaces too, so it cannot make that call.
+	env CODER_NVIM_REMOTE=1 \
+		NVIM_PROFILE=work \
+		XDG_CONFIG_HOME="$ROOT/xdg/config" \
+		XDG_DATA_HOME="$ROOT/xdg/data" \
+		XDG_STATE_HOME="$ROOT/xdg/state" \
+		XDG_CACHE_HOME="$ROOT/xdg/cache" \
+		$launch "$nvim" --headless --listen "$SOCK" >>"$LOG" 2>&1 </dev/null &
+
+	# Bounded wait. If it never comes up, say so and stop — no open-ended retry.
+	i=0
+	while [ "$i" -lt 100 ]; do
+		server_responds "$nvim" && return 0
+		i=$((i + 1))
+		sleep 0.1
+	done
+	die "server did not come up within 10s; see $LOG"
+}
+
+cmd_attach() {
+	sha=${1:?sha required}
+	shift
+	cmd_serve "$sha"
+	nvim=$(nvim_bin "$sha")
+
+	# --remote-ui takes no file arguments, so hand any over to the server first.
+	[ $# -gt 0 ] && "$nvim" --server "$SOCK" --remote "$@" >/dev/null 2>&1
+
+	# Tell the terminal our cwd is on this host, so kitty's new_window_with_cwd
+	# opens its next window here over ssh rather than in a local directory.
+	printf '\033]7;file://%s%s\033\\' "$(uname -n)" "$PWD"
+
+	exec "$nvim" --server "$SOCK" --remote-ui
+}
+
+cmd_socket() { printf '%s\n' "$SOCK"; }
+
+cmd_status() {
+	if [ ! -S "$SOCK" ]; then
+		echo "no server running"
+		return 0
+	fi
+	pid=$(pgrep -f -- "--listen $SOCK" 2>/dev/null | head -1 || true)
+	if [ -n "$pid" ]; then
+		echo "server running (pid $pid) on $SOCK"
+	else
+		echo "stale socket at $SOCK (no process); it will be replaced on next start"
+	fi
+}
+
+cmd_stop() {
+	if [ ! -S "$SOCK" ]; then
+		echo "no server running"
+		return 0
+	fi
+	nvim=$(ls -d "$ROOT"/nvim-*/squashfs-root/AppRun 2>/dev/null | head -1 || true)
+	if [ -n "$nvim" ]; then
+		"$nvim" --server "$SOCK" --remote-send '<C-\><C-N>:qa!<CR>' >/dev/null 2>&1 || true
+		sleep 1
+	fi
+	pkill -f -- "--listen $SOCK" 2>/dev/null || true
+	rm -f "$SOCK"
+	echo "server stopped"
+}
+
+case ${1:-} in
+extract) shift; cmd_extract "$@" ;;
+serve)   shift; cmd_serve "$@" ;;
+attach)  shift; cmd_attach "$@" ;;
+socket)  shift; cmd_socket ;;
+status)  shift; cmd_status ;;
+stop)    shift; cmd_stop ;;
+*) die "usage: coder-nvim-remote {extract|serve|attach|socket|status|stop} [args]" ;;
+esac

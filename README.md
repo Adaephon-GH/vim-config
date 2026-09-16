@@ -5,7 +5,7 @@ Two **separate** configurations that share this repo but not their code:
 | Path | Editor | Role |
 |------|--------|------|
 | `vim-config/.vim/` | classic **Vim** | lean, instant-startup editor for quick edits; no LSP, works on older Vim (e.g. Ubuntu 22.04). Managed by `vim-plug`. |
-| `neovim-config/.config/nvim/` | **Neovim** | full IDE: native LSP, `blink.cmp` completion + signature help, treesitter, telescope, git/diff, Claude Code, remote dev. Managed by `lazy.nvim`. |
+| `neovim-config/.config/nvim/` | **Neovim** | full IDE: native LSP, `blink.cmp` completion + signature help, treesitter, telescope, git/diff, Claude Code, Coder workspaces. Managed by `lazy.nvim`. |
 
 The folder layout mirrors `$HOME`, so both trees are meant to be symlinked/stowed
 into your home directory (e.g. with GNU stow).
@@ -54,10 +54,21 @@ treesitter highlighting, just without that server's IDE features.
 
 ### Remote development (Coder)
 
+Handled by the `coder-nvim` script in `neovim-config/.config/nvim/bin/`, not by a plugin
+(remote-nvim.nvim was archived upstream). It keeps a **headless Neovim running on
+the workspace** that survives disconnects, ships your local Neovim AppImage there
+so both ends are the same build, syncs this config, and attaches a UI to it.
+Its workspace half, `bin/coder-nvim-remote`, is part of this config, so the sync
+itself delivers it — a fresh workspace needs no preparation.
+
 1. `coder config-ssh` to add the workspace SSH hosts to `~/.ssh/config`.
-2. In Neovim run `:RemoteStart` (remote-nvim.nvim) and pick the workspace — it
-   installs a headless Neovim + this config on the remote and drives it from your
-   local UI.
+2. From a terminal: `coder-nvim <workspace>` (no argument prompts you to pick
+   one). `coder-nvim -w <workspace>` opens it in a new kitty window instead.
+3. From inside a running Neovim: `:CoderStart` (`<leader>rs`) hands this UI over
+   to the workspace; `:CoderBack` returns to the local session.
+
+The remote server runs with `NVIM_PROFILE=work`. `coder-nvim --status <ws>` and
+`coder-nvim --stop <ws>` manage it.
 
 ## First run
 
