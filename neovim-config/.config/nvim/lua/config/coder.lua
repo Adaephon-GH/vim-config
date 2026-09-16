@@ -15,8 +15,12 @@
 
 local M = {}
 
+-- The tunnel deliberately outlives :CoderBack, so returning to the workspace is
+-- just another :connect. That only works if we remember what is open.
 local state = {
   job = nil, ---@type integer? tunnel job in the local session
+  ws = nil, ---@type string? workspace that tunnel serves
+  sock = nil, ---@type string? forwarded socket, once the tunnel reports it
   errors = {}, ---@type string[] stderr from the tunnel, for reporting
   stopping = false, ---@type boolean set by :CoderStop, so its exit is not an error
 }
@@ -106,13 +110,14 @@ end
 ---:connect on a dead one detaches the UI into nothing, which is unrecoverable
 ---from inside Neovim.
 ---@param sock string
+---@return boolean attached false when the address did not answer
 local function attach(sock)
   local home = vim.v.servername
 
   local chan = rpc_connect(sock)
   if not chan then
     notify("server at " .. sock .. " did not answer; staying put", vim.log.levels.ERROR)
-    return
+    return false
   end
 
   -- Teach the remote instance how to get back here. It runs this same file.
@@ -128,16 +133,71 @@ local function attach(sock)
 
   notify("attaching to " .. sock)
   vim.cmd.connect(sock)
+  return true
+end
+
+---Close the tunnel. `quiet` marks the exit as expected, so on_exit does not
+---report it as a failure.
+local function stop_tunnel(quiet)
+  local job = state.job
+  if not job then
+    return false
+  end
+  state.stopping = quiet ~= false
+  -- Forget it now rather than in on_exit: that fires on the next event-loop
+  -- turn, and until then the tunnel would still look resumable.
+  state.job = nil
+  state.sock = nil
+  state.ws = nil
+  vim.fn.jobstop(job)
+  return true
+end
+
+---Hand this UI back to the workspace over the tunnel that is already open.
+---@return boolean
+local function resume()
+  if not state.job or not state.sock then
+    notify("no tunnel to resume; use :CoderStart <workspace>", vim.log.levels.WARN)
+    return false
+  end
+  if attach(state.sock) then
+    return true
+  end
+  -- The socket is forwarded but nothing answers: the workspace went away (they
+  -- stop on a schedule). Clear the tunnel out rather than leaving a dead one
+  -- blocking every later :CoderStart.
+  local ws = state.ws
+  stop_tunnel(true)
+  notify(("the tunnel to %s is stale; stopped it -- :CoderStart %s to reconnect"):format(ws, ws), vim.log.levels.WARN)
+  return false
 end
 
 ---@param ws string
 local function start(ws)
   if state.job then
-    notify("a tunnel is already running; :CoderStop it first", vim.log.levels.WARN)
+    -- A live tunnel to the same workspace is the :CoderBack case: reattach
+    -- rather than tearing down a connection that never went anywhere.
+    if state.ws == ws then
+      if state.sock then
+        resume()
+      else
+        notify("already connecting to " .. ws .. " ...")
+      end
+      return
+    end
+    notify(
+      ("a tunnel to %s is already running; :CoderStop it first, or :CoderStart %s to reattach"):format(
+        state.ws,
+        state.ws
+      ),
+      vim.log.levels.WARN
+    )
     return
   end
 
   state.errors = {}
+  state.ws = ws
+  state.sock = nil
   local cancel
 
   local job = vim.fn.jobstart({ script(), "--tunnel", ws }, {
@@ -148,6 +208,7 @@ local function start(ws)
           if cancel then
             cancel()
           end
+          state.sock = line
           vim.schedule(function()
             attach(line)
           end)
@@ -166,6 +227,8 @@ local function start(ws)
         cancel()
       end
       state.job = nil
+      state.sock = nil
+      state.ws = nil
       if state.stopping then
         state.stopping = false
         notify("tunnel to " .. ws .. " closed")
@@ -177,6 +240,7 @@ local function start(ws)
 
   if job <= 0 then
     notify("could not run coder-nvim", vim.log.levels.ERROR)
+    state.ws = nil
     return
   end
   state.job = job
@@ -197,7 +261,13 @@ function M.setup()
   vim.api.nvim_create_user_command("CoderBack", function()
     local home = vim.g.coder_return_address
     if not home or home == "" then
-      notify("no return address recorded; this session was not started by :CoderStart", vim.log.levels.WARN)
+      -- Most likely: run from the local session, where there is nowhere to go
+      -- back to. If a tunnel is open, the wanted command is :CoderResume.
+      if state.job and state.sock then
+        notify("this is the local session; use :CoderResume to return to " .. tostring(state.ws))
+      else
+        notify("no return address recorded; this session was not started by :CoderStart", vim.log.levels.WARN)
+      end
       return
     end
     -- No liveness check here, unlike attaching. This command runs in the
@@ -213,6 +283,18 @@ function M.setup()
   -- bin/coder-nvim nor the `coder` CLI distinguishes the two (workspaces ship
   -- the CLI as well), so the server sets CODER_NVIM_REMOTE to identify itself.
   if vim.env.CODER_NVIM_REMOTE then
+    -- Claim the same names over there rather than leaving them undefined: on
+    -- the workspace these would otherwise fail with a bare E492, which reads
+    -- like the config failed to sync rather than like the command not applying.
+    local here = vim.env.CODER_WORKSPACE_NAME
+    if not here or here == "" then
+      here = vim.fn.hostname()
+    end
+    for _, name in ipairs({ "CoderStart", "CoderResume", "CoderStop", "CoderStatus" }) do
+      vim.api.nvim_create_user_command(name, function()
+        notify(("this is the workspace session (%s); :CoderBack returns to the local session"):format(here))
+      end, { nargs = "?", desc = "Coder: not applicable in a workspace session" })
+    end
     return
   end
   if vim.fn.executable("coder") ~= 1 then
@@ -222,6 +304,12 @@ function M.setup()
   vim.api.nvim_create_user_command("CoderStart", function(opts)
     if opts.args ~= "" then
       start(opts.args)
+      return
+    end
+    -- With a tunnel open, every picker choice but the current one would be
+    -- refused anyway, so treat a bare :CoderStart as "take me back".
+    if state.job then
+      resume()
       return
     end
     local names = workspaces()
@@ -240,18 +328,19 @@ function M.setup()
     complete = workspaces,
   })
 
+  vim.api.nvim_create_user_command("CoderResume", function()
+    resume()
+  end, { desc = "Coder: reattach this UI to the workspace tunnel already open" })
+
   vim.api.nvim_create_user_command("CoderStop", function()
-    if not state.job then
+    if not stop_tunnel(true) then
       notify("no tunnel running")
-      return
     end
-    state.stopping = true
-    vim.fn.jobstop(state.job)
   end, { desc = "Coder: close the tunnel opened by :CoderStart" })
 
   vim.api.nvim_create_user_command("CoderStatus", function(opts)
-    local ws = opts.args
-    if ws == "" then
+    local ws = opts.args ~= "" and opts.args or state.ws
+    if not ws or ws == "" then
       notify("usage: :CoderStatus <workspace>", vim.log.levels.WARN)
       return
     end
