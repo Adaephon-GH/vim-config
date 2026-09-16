@@ -38,8 +38,12 @@ Options:
   -t, --tunnel       forward the server socket, print its local path, and hold
                      (used by :CoderStart inside Neovim)
   -n, --no-sync      skip the config sync
+      --sync         push the config and exit, even if nothing changed
+      --restart      push the config and restart the workspace's Neovim server,
+                     so config changes take effect (a running server only reads
+                     its config at startup). Discards unsaved buffers there.
   -s, --stop         stop the workspace's Neovim server
-      --status       report server state
+      --status       report server state, and whether the config matches
       --list         print "name<TAB>status" for each workspace and exit
   -h, --help         this text
 
@@ -191,9 +195,20 @@ ship_nvim() {
 }
 
 # Cheap fingerprint of the config tree, so an unchanged config costs nothing.
+# Includes mtimes, so it answers "has my tree changed since I last synced" and
+# nothing else -- it is NOT comparable across machines, since copying rewrites
+# mtimes. Use config_digest for that.
 config_stamp() {
 	local dir=$1
 	(cd "$dir" && find . -type f ! -path './.git/*' -printf '%P %s %T@\n' 2>/dev/null | LC_ALL=C sort | sha256sum | cut -c1-32)
+}
+
+# Content-and-paths digest, identical on both ends when the trees match.
+readonly DIGEST_CMD='find . -type f ! -path "./.git/*" -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-32'
+
+config_digest() {
+	local dir=$1
+	(cd "$dir" && eval "$DIGEST_CMD")
 }
 
 sync_config() {
@@ -208,16 +223,23 @@ sync_config() {
 	fi
 
 	local dst="$R_CONFIG"
-	rsh "mkdir -p $dst"
 	if [ "$HAS_RSYNC" = yes ]; then
+		rsh "mkdir -p $dst"
 		rsync -az --delete -e "ssh ${SSH_OPTS[*]}" "$src/" "$HOST:${dst//\$HOME/\~}/"
 	else
 		# rsync is not on the workspace and cannot be copied there (it links
 		# against 8 shared libs), so fall back to tar. The stamp above keeps
 		# this from running on every connect.
+		#
+		# Unpack beside the live tree and swap, rather than extracting over it:
+		# tar only adds and overwrites, so extracting in place would leave a
+		# file deleted locally sitting on the workspace forever. rsync gets
+		# this right on its own with --delete.
+		rsh "rm -rf $dst.new && mkdir -p $dst.new"
 		tar czf - --no-xattrs --numeric-owner --no-acls --no-same-owner \
 			--no-same-permissions -C "$src" . |
-			rsh "tar xzf - -C $dst"
+			rsh "tar xzf - -C $dst.new"
+		rsh "rm -rf $dst && mv $dst.new $dst"
 	fi
 	mkdir -p "$LOCAL_CACHE"
 	printf '%s\n' "$stamp" >"$stampfile"
@@ -314,8 +336,37 @@ mode_stop() {
 	rsh "test -r $R_HELPER && sh $R_HELPER stop || echo 'no server (helper not installed)'"
 }
 
+mode_sync() {
+	FORCE_SYNC=1
+	prepare
+	note "config pushed to $WS (restart the server with --restart to apply it)"
+}
+
+mode_restart() {
+	FORCE_SYNC=1
+	prepare
+	rsh "test -r $R_HELPER && sh $R_HELPER stop >/dev/null 2>&1 || true"
+	rsh "sh $R_HELPER serve $NVIM_SHA" >/dev/null
+	rsh "sh $R_HELPER status"
+}
+
 mode_status() {
 	rsh "test -r $R_HELPER && sh $R_HELPER status || echo 'no server (helper not installed)'"
+
+	# Compare content, not the mtime-based sync stamp: copying rewrites mtimes,
+	# so that one would report a mismatch every time.
+	local src local_digest remote_digest
+	src=$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/nvim")
+	local_digest=$(config_digest "$src")
+	remote_digest=$(rsh "cd $R_CONFIG 2>/dev/null && $DIGEST_CMD" 2>/dev/null || true)
+
+	if [ -z "$remote_digest" ]; then
+		echo "config: not present on $WS"
+	elif [ "$local_digest" = "$remote_digest" ]; then
+		echo "config: matches local ($local_digest)"
+	else
+		echo "config: DIFFERS (local $local_digest, remote $remote_digest) -- run --sync or --restart"
+	fi
 }
 
 # --- main --------------------------------------------------------------------
@@ -333,7 +384,8 @@ main() {
 			list_workspaces
 			exit 0
 			;;
-		--sync) FORCE_SYNC=1 ;;
+		--sync) action=sync ;;
+		--restart) action=restart ;;
 		-h | --help)
 			usage
 			exit 0
@@ -361,6 +413,8 @@ main() {
 	new-window) mode_new_window "$@" ;;
 	tunnel) mode_tunnel ;;
 	stop) mode_stop ;;
+	sync) mode_sync ;;
+	restart) mode_restart ;;
 	status) mode_status ;;
 	esac
 }

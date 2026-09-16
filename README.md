@@ -67,8 +67,14 @@ itself delivers it — a fresh workspace needs no preparation.
 3. From inside a running Neovim: `:CoderStart` (`<leader>rs`) hands this UI over
    to the workspace; `:CoderBack` returns to the local session.
 
-The remote server runs with `NVIM_PROFILE=work`. `coder-nvim --status <ws>` and
-`coder-nvim --stop <ws>` manage it.
+The remote server runs with `NVIM_PROFILE=work`. `coder-nvim --status <ws>` reports
+whether it is running and whether the workspace's copy of this config matches the
+local one; `coder-nvim --stop <ws>` stops it.
+
+The config is pushed automatically whenever it has changed. A *running* workspace
+server reads its config only at startup, though, so edits reach an open session
+only after `coder-nvim --restart <ws>` (which discards unsaved buffers there).
+`coder-nvim --sync <ws>` pushes without restarting.
 
 ## First run
 
