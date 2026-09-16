@@ -6,7 +6,10 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
 -- Use the system python3 for the provider so it keeps working inside venvs.
-vim.g.python3_host_prog = "/usr/bin/python3"
+-- Not every host has one at /usr/bin (Coder workspaces ship python only inside
+-- their app venv), so fall back to whatever is on PATH.
+vim.g.python3_host_prog = vim.fn.executable("/usr/bin/python3") == 1 and "/usr/bin/python3"
+  or vim.fn.exepath("python3")
 
 -- Providers we don't use -- disabling them speeds startup and silences health.
 vim.g.loaded_perl_provider = 0
